@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Football Recap AI</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Noto Sans Myanmar",sans-serif;background:#0b1020;color:#fff}
+.container{max-width:720px;margin:auto;padding:22px}
+h1{margin:0 0 6px;font-size:28px}
+.sub{color:#aeb7d0;margin:0 0 22px}
+.card{background:#151c31;border:1px solid #293451;border-radius:18px;padding:18px;margin-bottom:16px}
+label{display:block;font-weight:700;margin-bottom:8px}
+input,textarea,select,button{width:100%;font:inherit;border-radius:12px}
+input,textarea,select{background:#0d1426;color:#fff;border:1px solid #34415f;padding:12px}
+textarea{min-height:150px;resize:vertical}
+input[type=file]{padding:10px}
+button{border:0;padding:13px 16px;background:#2f7cff;color:white;font-weight:800;cursor:pointer;margin-top:12px}
+button:disabled{opacity:.55;cursor:not-allowed}
+.secondary{background:#27324d}
+.preview{width:100%;max-height:380px;background:#05070d;border-radius:12px;margin-top:12px;display:none}
+audio{width:100%;margin-top:12px;display:none}
+.status{padding:12px;border-radius:12px;background:#0d1426;color:#b9c5e3;margin-top:12px;display:none}
+.result{white-space:pre-wrap;line-height:1.75;background:#0d1426;border-radius:12px;padding:14px;margin-top:12px;display:none}
+small{color:#8f9ab7}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>⚽ Football Recap AI</h1>
+  <p class="sub">ဗီဒီယိုထည့် → Recap စာသားပြင် → အသံနမူနာထည့်</p>
+
+  <div class="card">
+    <label for="videoUrl">🔗 Video Link</label>
+    <input id="videoUrl" type="url" placeholder="https://example.com/video.mp4">
+    <small>တိုက်ရိုက် video file link (.mp4 စသည်) ဖြစ်ရင် preview လုပ်နိုင်ပါတယ်။</small>
+  </div>
+
+  <div class="card">
+    <label for="videoFile">🎬 ဒါမှမဟုတ် Video Upload</label>
+    <input id="videoFile" type="file" accept="video/*">
+    <video id="videoPreview" class="preview" controls playsinline></video>
+  </div>
+
+  <div class="card">
+    <label for="voiceFile">🎙️ ကိုယ့်အသံနမူနာ Upload</label>
+    <input id="voiceFile" type="file" accept="audio/*">
+    <audio id="voicePreview" controls></audio>
+    <small>အသံနမူနာကို ဒီစာမျက်နှာမှာပဲ preview လုပ်နိုင်ပါတယ်။ အသံ clone/TTS ကို server-side AI service ချိတ်ပြီးမှ ထုတ်နိုင်ပါမယ်။</small>
+  </div>
+
+  <div class="card">
+    <label for="voiceMode">🔊 အသံရွေးချယ်ရန်</label>
+    <select id="voiceMode">
+      <option value="sample">ကိုယ့်အသံနမူနာ</option>
+      <option value="ai">AI Voice</option>
+    </select>
+  </div>
+
+  <div class="card">
+    <label for="recap">📝 မြန်မာ Football Recap</label>
+    <textarea id="recap" placeholder="Recap စာသားကို ဒီမှာထည့်ပါ..."></textarea>
+    <button id="speakBtn">🔊 မြန်မာအသံနဲ့ ဖတ်ပြ</button>
+    <button id="clearBtn" class="secondary">ရှင်းမယ်</button>
+    <div id="status" class="status"></div>
+    <div id="result" class="result"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let videoObjectUrl = null;
+let voiceObjectUrl = null;
+
+function status(msg){
+  $("status").style.display = "block";
+  $("status").textContent = msg;
+}
+
+$("videoFile").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl);
+  videoObjectUrl = URL.createObjectURL(file);
+  $("videoPreview").src = videoObjectUrl;
+  $("videoPreview").style.display = "block";
+  status("Video တင်ပြီးပါပြီ ✅");
+});
+
+$("videoUrl").addEventListener("change", () => {
+  const url = $("videoUrl").value.trim();
+  if (!url) return;
+  $("videoPreview").src = url;
+  $("videoPreview").style.display = "block";
+  $("videoPreview").onerror = () => status("ဒီ Link ကို browser က video အဖြစ်ဖွင့်မရပါ။ Video file ကို Upload လုပ်ပါ။");
+});
+
+$("voiceFile").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (voiceObjectUrl) URL.revokeObjectURL(voiceObjectUrl);
+  voiceObjectUrl = URL.createObjectURL(file);
+  $("voicePreview").src = voiceObjectUrl;
+  $("voicePreview").style.display = "block";
+  status("အသံနမူနာ တင်ပြီးပါပြီ ✅");
+});
+
+$("speakBtn").addEventListener("click", () => {
+  const text = $("recap").value.trim();
+  if (!text) {
+    status("အရင်ဆုံး Recap စာသားထည့်ပါ။");
+    return;
+  }
+  if (!("speechSynthesis" in window)) {
+    status("ဒီ browser မှာ Text-to-Speech မရနိုင်ပါ။");
+    return;
+  }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "my-MM";
+  u.rate = 0.92;
+  u.pitch = 1;
+  speechSynthesis.speak(u);
+  $("result").style.display = "block";
+  $("result").textContent = "အသံဖတ်နေပါပြီ…";
+  u.onend = () => $("result").textContent = "အသံဖတ်ပြီးပါပြီ ✅";
+});
+
+$("clearBtn").addEventListener("click", () => {
+  $("recap").value = "";
+  $("result").style.display = "none";
+  $("status").style.display = "none";
+  speechSynthesis?.cancel();
+});
+</script>
+</body>
+</html>
