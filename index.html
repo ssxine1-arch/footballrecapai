@@ -3,272 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Football Recap AI</title>
-
+<title>Recap AI</title>
 <style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  background:#0b1020;
-  color:#fff;
-  font-family:system-ui,"Noto Sans Myanmar",sans-serif
-}
-.container{
-  max-width:720px;
-  margin:auto;
-  padding:20px
-}
-.card{
-  background:#151c31;
-  border:1px solid #293451;
-  border-radius:18px;
-  padding:18px;
-  margin-bottom:16px
-}
-h1{margin:0 0 8px}
-.sub{color:#aeb7d0}
-label{
-  display:block;
-  font-weight:700;
-  margin-bottom:8px
-}
-input,select,textarea,button{
-  width:100%;
-  font:inherit;
-  border-radius:12px
-}
-input,select,textarea{
-  background:#0d1426;
-  color:#fff;
-  border:1px solid #34415f;
-  padding:12px
-}
-textarea{
-  min-height:220px;
-  resize:vertical
-}
-button{
-  border:0;
-  padding:14px;
-  margin-top:12px;
-  background:#2f7cff;
-  color:#fff;
-  font-weight:800
-}
-button:disabled{opacity:.6}
-.status{
-  display:none;
-  background:#0d1426;
-  padding:12px;
-  border-radius:12px;
-  margin-top:12px;
-  line-height:1.6
-}
-small{color:#8f9ab7}
+body{margin:0;background:#0b1020;color:white;font-family:Arial,sans-serif}
+.container{max-width:700px;margin:auto;padding:20px}
+.card{background:#151c31;padding:18px;border-radius:16px;margin-bottom:16px}
+input,select,textarea,button{width:100%;box-sizing:border-box;padding:13px;margin-top:10px;border-radius:10px;font-size:16px}
+input,select,textarea{background:#0d1426;color:white;border:1px solid #34415f}
+button{background:#2f7cff;color:white;border:0;font-weight:bold}
+textarea{height:220px}
+#status{margin-top:12px;padding:10px;background:#0d1426;border-radius:10px}
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
 <h1>⚽🎬 Recap AI</h1>
-
-<p class="sub">
-Video ထည့် → AI ကြည့် → မြန်မာ Recap ထုတ်
-</p>
+<p>Video ထည့် → AI ကြည့် → မြန်မာ Recap ထုတ်</p>
 
 <div class="card">
-
 <label>🎬 Video</label>
-
-<input
-  id="videoFile"
-  type="file"
-  accept="video/*"
->
-
-<small>
-အများဆုံး 10 မိနစ်
-</small>
-
+<input id="video" type="file" accept="video/*">
+<small>အများဆုံး 10 မိနစ်</small>
 </div>
 
 <div class="card">
-
 <label>📝 Recap Style</label>
-
 <select id="style">
-  <option value="football">
-    ⚽ Football Recap
-  </option>
-
-  <option value="movie">
-    🎬 Movie Recap
-  </option>
-
-  <option value="tiktok">
-    📱 TikTok / Shorts Recap
-  </option>
-
-  <option value="natural">
-    🗣️ သဘာဝ စကားပြောပုံစံ
-  </option>
+<option value="football">⚽ Football Recap</option>
+<option value="movie">🎬 Movie Recap</option>
+<option value="tiktok">📱 TikTok / Shorts Recap</option>
+<option value="natural">🗣️ သဘာဝ စကားပြောပုံစံ</option>
 </select>
-
 </div>
 
 <div class="card">
-
-<label>📝 မြန်မာ Recap</label>
-
-<textarea
-  id="recap"
-  placeholder="Video ထည့်ပြီး AI ခလုတ်နှိပ်ပါ..."
-></textarea>
-
-<button id="aiBtn">
-🤖 AI နဲ့ Recap ထုတ်မယ်
-</button>
-
-<div id="status" class="status"></div>
-
+<textarea id="recap" placeholder="AI Recap ဒီမှာပေါ်ပါမယ်..."></textarea>
+<button id="btn">🤖 AI နဲ့ Recap ထုတ်မယ်</button>
+<div id="status"></div>
 </div>
 
 </div>
 
 <script>
+const video=document.getElementById("video");
+const btn=document.getElementById("btn");
+const recap=document.getElementById("recap");
+const status=document.getElementById("status");
 
-const $ = id =>
-  document.getElementById(id);
+function show(x){status.textContent=x}
 
-function status(message){
+video.onchange=()=>{
+ const f=video.files[0];
+ if(!f)return;
 
-  $("status").style.display = "block";
+ const v=document.createElement("video");
+ v.preload="metadata";
 
-  $("status").textContent = message;
-}
+ v.onloadedmetadata=()=>{
+   URL.revokeObjectURL(v.src);
 
+   if(v.duration>600){
+     video.value="";
+     show("❌ Video 10 မိနစ်ထက် မကျော်ရပါ");
+   }else{
+     show("✅ Video အဆင်ပြေပါတယ်");
+   }
+ };
 
-/* VIDEO CHECK */
+ v.src=URL.createObjectURL(f);
+};
 
-$("videoFile").addEventListener(
-  "change",
-  e => {
+btn.onclick=async()=>{
+ const f=video.files[0];
 
-    const file =
-      e.target.files[0];
+ if(!f){
+   show("❌ Video အရင်ထည့်ပါ");
+   return;
+ }
 
-    if(!file) return;
+ btn.disabled=true;
+ show("🤖 AI ပြင်ဆင်နေပါတယ်...");
 
-    const video =
-      document.createElement("video");
+ try{
 
-    video.preload = "metadata";
+   const form=new FormData();
+   form.append("video",f);
+   form.append("style",document.getElementById("style").value);
 
-    video.onloadedmetadata = () => {
+   const r=await fetch("/api/gemini",{
+     method:"POST",
+     body:form
+   });
 
-      URL.revokeObjectURL(
-        video.src
-      );
+   const text=await r.text();
 
-      if(video.duration > 600){
+   let data;
+   try{
+     data=JSON.parse(text);
+   }catch{
+     throw new Error(text||"Server Error");
+   }
 
-        status(
-          "❌ Video က 10 မိနစ်ထက် မကျော်ရပါ။"
-        );
+   if(!r.ok) throw new Error(data.error||"AI Error");
 
-        $("videoFile").value = "";
+   recap.value=data.result||"";
+   show("✅ Recap ပြီးပါပြီ");
 
-        return;
-      }
+ }catch(e){
+   show("❌ "+e.message);
+ }finally{
+   btn.disabled=false;
+ }
+};
+</script>
 
-      status(
-        "✅ Video အဆင်ပြေပါတယ်။"
-      );
-
-    };
-
-    video.onerror = () => {
-
-      status(
-        "❌ Video ဖတ်မရပါ။"
-      );
-
-    };
-
-    video.src =
-      URL.createObjectURL(file);
-
-  }
-);
-
-
-/* AI RECAP */
-
-$("aiBtn").addEventListener(
-  "click",
-  async () => {
-
-    const file =
-      $("videoFile").files[0];
-
-    if(!file){
-
-      status(
-        "❌ အရင်ဆုံး Video ထည့်ပါ။"
-      );
-
-      return;
-    }
-
-    $("aiBtn").disabled = true;
-
-    status(
-      "🤖 Video ကို AI ဆီပို့နေပါတယ်..."
-    );
-
-    try{
-
-      const base64 =
-        await new Promise(
-          (resolve,reject) => {
-
-            const reader =
-              new FileReader();
-
-            reader.onload = () => {
-
-              const result =
-                reader.result;
-
-              const comma =
-                result.indexOf(",");
-
-              resolve(
-                result.substring(
-                  comma + 1
-                )
-              );
-
-            };
-
-            reader.onerror =
-              () =>
-                reject(
-                  new Error(
-                    "Video ဖတ်မရပါ"
-                  )
-                );
-
-            reader.readAsDataURL(
-              file
-            );
-
-          }
-        );
-
-
-      status(
-        "🤖 Gemini က Video ကိုကြည့်ပြီး Recap ရေးနေပါတယ်..."
-     
+</body>
+</html>
