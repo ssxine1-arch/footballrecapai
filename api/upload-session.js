@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
   }
@@ -24,4 +24,35 @@ export default async function handler(req, res) {
           "X-Goog-Upload-Header-Content-Type": mimeType,
           "Content-Type": "application/json"
         },
-       
+        body: JSON.stringify({
+          file: {
+            display_name: "recap-video"
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || "Gemini upload error");
+    }
+
+    const uploadUrl =
+      response.headers.get("x-goog-upload-url");
+
+    if (!uploadUrl) {
+      throw new Error("Upload URL မရပါ");
+    }
+
+    return res.status(200).json({
+      uploadUrl
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: error.message || "Upload session error"
+    });
+  }
+};
