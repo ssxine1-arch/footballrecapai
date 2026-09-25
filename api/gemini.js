@@ -25,21 +25,18 @@ TikTok / Facebook Shorts Voice-over အတွက် စိတ်ဝင်စာ�
       movie: `
 ဒီဗီဒီယိုကို သေချာကြည့်ပြီး မြန်မာလို Movie Recap ရေးပါ။
 ဇာတ်လမ်းကို အစဉ်လိုက် သဘာဝကျတဲ့ စကားပြောပုံစံနဲ့ ပြန်ပြောပါ။
-TikTok / Facebook Shorts Voice-over အတွက် စိတ်ဝင်စားစရာကောင်းအောင် ရေးပါ။
 ဗီဒီယိုထဲမှာ မပါဝင်တဲ့အချက်တွေ မဖန်တီးပါနဲ့။
 `,
 
       tiktok: `
 ဒီဗီဒီယိုအတွက် မြန်မာလို TikTok / Shorts Recap ရေးပါ။
-ပထမပိုင်းမှာ စိတ်ဝင်စားစရာ Hook ထည့်ပါ။
-စကားပြောပုံစံ သဘာဝကျပြီး တိုတိုရှင်းရှင်း ဖြစ်ပါစေ။
-ဖြစ်ရပ်တွေကို အစဉ်လိုက် ပြောပါ။
+အစမှာ စိတ်ဝင်စားစရာ Hook ထည့်ပါ။
+သဘာဝကျတဲ့ စကားပြောပုံစံနဲ့ ရေးပါ။
 `,
 
       natural: `
 ဒီဗီဒီယိုကို မြန်မာလို သဘာဝကျတဲ့ စကားပြောပုံစံနဲ့ ပြန်ပြောပြပါ။
-သူငယ်ချင်းတစ်ယောက်ကို ပြန်ရှင်းပြနေသလို ရေးပါ။
-ဖြစ်ရပ်တွေကို အစဉ်လိုက် ဖော်ပြပါ။
+သူငယ်ချင်းတစ်ယောက်ကို ရှင်းပြနေသလို ရေးပါ။
 ဗီဒီယိုထဲမှာ မပါဝင်တဲ့အချက်တွေ မဖန်တီးပါနဲ့။
 `
     };
@@ -47,7 +44,7 @@ TikTok / Facebook Shorts Voice-over အတွက် စိတ်ဝင်စာ�
     const prompt = prompts[style] || prompts.football;
 
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/interactions",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
       {
         method: "POST",
         headers: {
@@ -55,17 +52,19 @@ TikTok / Facebook Shorts Voice-over အတွက် စိတ်ဝင်စာ�
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "gemini-3.8-flash",
-          input: [
+          contents: [
             {
-              type: "video",
-              uri: fileUri,
-              mime_type: mimeType,
-              processing: "agentic"
-            },
-            {
-              type: "text",
-              text: prompt
+              parts: [
+                {
+                  file_data: {
+                    mime_type: mimeType,
+                    file_uri: fileUri
+                  }
+                },
+                {
+                  text: prompt
+                }
+              ]
             }
           ]
         })
@@ -76,20 +75,14 @@ TikTok / Facebook Shorts Voice-over အတွက် စိတ်ဝင်စာ�
 
     if (!response.ok) {
       throw new Error(
-        data.error?.message || "Gemini Error"
+        data.error?.message || "Gemini API Error"
       );
     }
 
-    let result = "";
-
-    if (data.output_text) {
-      result = data.output_text;
-    } else if (data.outputs) {
-      result = data.outputs
-        .filter(x => x.type === "text")
-        .map(x => x.text)
-        .join("\n");
-    }
+    const result =
+      data.candidates?.[0]?.content?.parts
+        ?.map(part => part.text || "")
+        .join("") || "";
 
     if (!result) {
       throw new Error("Gemini က Recap မပြန်ပါ");
@@ -98,7 +91,7 @@ TikTok / Facebook Shorts Voice-over အတွက် စိတ်ဝင်စာ�
     return res.status(200).json({ result });
 
   } catch (error) {
-    console.error(error);
+    console.error("GEMINI ERROR:", error);
 
     return res.status(500).json({
       error: error.message || "Server Error"
