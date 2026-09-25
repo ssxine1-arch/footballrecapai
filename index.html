@@ -12,14 +12,12 @@ h1{margin:0 0 6px}
 .sub{color:#aeb7d0;margin-bottom:20px}
 .card{background:#151c31;border:1px solid #293451;border-radius:18px;padding:18px;margin-bottom:16px}
 label{display:block;font-weight:700;margin-bottom:8px}
-textarea,input,select,button{width:100%;font:inherit;border-radius:12px}
-textarea,input,select{background:#0d1426;color:#fff;border:1px solid #34415f;padding:12px}
+input,textarea,select,button{width:100%;font:inherit;border-radius:12px}
+input,textarea,select{background:#0d1426;color:#fff;border:1px solid #34415f;padding:12px}
 textarea{min-height:190px}
-input[type=file]{padding:10px}
 button{border:0;padding:14px;margin-top:12px;background:#2f7cff;color:#fff;font-weight:800}
 .secondary{background:#27324d}
 .status{display:none;background:#0d1426;padding:12px;border-radius:12px;margin-top:12px}
-.result{display:none;white-space:pre-wrap;line-height:1.8;background:#0d1426;padding:14px;border-radius:12px;margin-top:12px}
 small{color:#8f9ab7}
 </style>
 </head>
@@ -28,7 +26,7 @@ small{color:#8f9ab7}
 <div class="container">
 
 <h1>⚽ Football Recap AI</h1>
-<p class="sub">ဗီဒီယိုထည့် → မြန်မာ Recap ထုတ် → အသံနဲ့ဖတ်</p>
+<p class="sub">ဗီဒီယိုထည့် → AI ကြည့် → မြန်မာ Recap ထုတ်</p>
 
 <div class="card">
 <label>🎬 Video Upload</label>
@@ -37,20 +35,19 @@ small{color:#8f9ab7}
 </div>
 
 <div class="card">
-<label>📝 Recap စာသား</label>
-<textarea id="recap" placeholder="ဒီမှာ ဘောလုံးသတင်း / အကြောင်းအရာ ထည့်ပါ..."></textarea>
+<label>📝 မြန်မာ Recap</label>
+<textarea id="recap" placeholder="ဗီဒီယိုထည့်ပြီး AI ခလုတ်နှိပ်ပါ..."></textarea>
 
-<button id="aiBtn">🤖 AI နဲ့ မြန်မာ Recap ထုတ်မယ်</button>
+<button id="aiBtn">🤖 AI နဲ့ Video Recap ထုတ်မယ်</button>
 <button id="speakBtn" class="secondary">🔊 မြန်မာအသံနဲ့ ဖတ်မယ်</button>
 
 <div id="status" class="status"></div>
-<div id="result" class="result"></div>
 </div>
 
 <div class="card">
 <label>🎙️ ကိုယ့်အသံနမူနာ</label>
 <input id="voiceFile" type="file" accept="audio/*">
-<small>အသံနမူနာကို နောက်တစ်ဆင့်မှာ Voice AI နဲ့ ချိတ်ပေးမယ်။</small>
+<small>Voice AI ချိတ်ပြီးနောက် ကိုယ့်အသံနဲ့ ဖတ်နိုင်အောင် ဆက်လုပ်မယ်။</small>
 </div>
 
 </div>
@@ -67,10 +64,8 @@ $("videoFile").addEventListener("change",e=>{
   const file=e.target.files[0];
   if(!file)return;
 
-  const max=10*60*1000;
-
-  if(file.size>500*1024*1024){
-    status("Video ဖိုင်က အရမ်းကြီးပါတယ်။");
+  if(file.size>30*1024*1024){
+    status("❌ အခုဗားရှင်းမှာ Video 30MB အောက်ပဲ ထည့်ပါ။");
     e.target.value="";
     return;
   }
@@ -83,9 +78,9 @@ $("videoFile").addEventListener("change",e=>{
 
     if(video.duration>600){
       status("❌ Video က 10 မိနစ်ထက် မကျော်ရပါ။");
-      $("videoFile").value="";
+      e.target.value="";
     }else{
-      status("✅ Video အဆင်ပြေပါတယ်။");
+      status("✅ Video အဆင်ပြေပါတယ်။ AI Recap ထုတ်လို့ရပါပြီ။");
     }
   };
 
@@ -93,23 +88,38 @@ $("videoFile").addEventListener("change",e=>{
 });
 
 $("aiBtn").addEventListener("click",async()=>{
-  const text=$("recap").value.trim();
+  const file=$("videoFile").files[0];
 
-  if(!text){
-    status("အရင်ဆုံး ဘောလုံးအကြောင်းအရာ ထည့်ပါ။");
+  if(!file){
+    status("❌ အရင်ဆုံး Video ထည့်ပါ။");
     return;
   }
 
   $("aiBtn").disabled=true;
-  status("🤖 Gemini က မြန်မာ Recap ရေးနေပါတယ်...");
+  status("🤖 AI က Video ကိုကြည့်ပြီး Recap ရေးနေပါတယ်...");
 
   try{
+    const base64=await new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+
+      reader.onload=()=>{
+        const result=reader.result;
+        resolve(result.split(",")[1]);
+      };
+
+      reader.onerror=()=>reject(new Error("Video ဖတ်မရပါ"));
+      reader.readAsDataURL(file);
+    });
+
     const response=await fetch("/api/gemini",{
       method:"POST",
       headers:{
         "Content-Type":"application/json"
       },
-      body:JSON.stringify({text})
+      body:JSON.stringify({
+        videoBase64:base64,
+        mimeType:file.type
+      })
     });
 
     const data=await response.json();
@@ -119,9 +129,7 @@ $("aiBtn").addEventListener("click",async()=>{
     }
 
     $("recap").value=data.result;
-    $("result").style.display="block";
-    $("result").textContent="✅ Recap ပြီးပါပြီ";
-    status("✅ မြန်မာ Recap ထုတ်ပြီးပါပြီ။");
+    status("✅ Video Recap ပြီးပါပြီ။");
 
   }catch(error){
     status("❌ "+error.message);
@@ -134,12 +142,12 @@ $("speakBtn").addEventListener("click",()=>{
   const text=$("recap").value.trim();
 
   if(!text){
-    status("အရင်ဆုံး Recap စာသားထည့်ပါ။");
+    status("❌ အရင်ဆုံး Recap ထုတ်ပါ။");
     return;
   }
 
   if(!("speechSynthesis" in window)){
-    status("ဒီ browser မှာ အသံဖတ်စနစ် မရပါ။");
+    status("❌ ဒီ browser မှာ အသံဖတ်စနစ် မရပါ။");
     return;
   }
 
@@ -148,7 +156,6 @@ $("speakBtn").addEventListener("click",()=>{
   const voice=new SpeechSynthesisUtterance(text);
   voice.lang="my-MM";
   voice.rate=0.92;
-  voice.pitch=1;
 
   speechSynthesis.speak(voice);
   status("🔊 အသံဖတ်နေပါတယ်...");
