@@ -4,162 +4,456 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Football Recap AI</title>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#0b1020;color:#fff;font-family:system-ui,"Noto Sans Myanmar",sans-serif}
-.container{max-width:720px;margin:auto;padding:20px}
-h1{margin:0 0 6px}
-.sub{color:#aeb7d0;margin-bottom:20px}
-.card{background:#151c31;border:1px solid #293451;border-radius:18px;padding:18px;margin-bottom:16px}
-label{display:block;font-weight:700;margin-bottom:8px}
-input,textarea,select,button{width:100%;font:inherit;border-radius:12px}
-input,textarea,select{background:#0d1426;color:#fff;border:1px solid #34415f;padding:12px}
-textarea{min-height:190px}
-button{border:0;padding:14px;margin-top:12px;background:#2f7cff;color:#fff;font-weight:800}
-.secondary{background:#27324d}
-.status{display:none;background:#0d1426;padding:12px;border-radius:12px;margin-top:12px}
-small{color:#8f9ab7}
+
+body{
+  margin:0;
+  background:#0b1020;
+  color:#fff;
+  font-family:system-ui,"Noto Sans Myanmar",sans-serif
+}
+
+.container{
+  max-width:720px;
+  margin:auto;
+  padding:20px
+}
+
+h1{
+  margin:0 0 6px
+}
+
+.sub{
+  color:#aeb7d0;
+  margin-bottom:20px
+}
+
+.card{
+  background:#151c31;
+  border:1px solid #293451;
+  border-radius:18px;
+  padding:18px;
+  margin-bottom:16px
+}
+
+label{
+  display:block;
+  font-weight:700;
+  margin-bottom:8px
+}
+
+input,textarea,select,button{
+  width:100%;
+  font:inherit;
+  border-radius:12px
+}
+
+input,textarea,select{
+  background:#0d1426;
+  color:#fff;
+  border:1px solid #34415f;
+  padding:12px
+}
+
+textarea{
+  min-height:190px;
+  resize:vertical
+}
+
+input[type=file]{
+  padding:10px
+}
+
+button{
+  border:0;
+  padding:14px;
+  margin-top:12px;
+  background:#2f7cff;
+  color:#fff;
+  font-weight:800
+}
+
+button:disabled{
+  opacity:.6
+}
+
+.secondary{
+  background:#27324d
+}
+
+.status{
+  display:none;
+  background:#0d1426;
+  padding:12px;
+  border-radius:12px;
+  margin-top:12px;
+  line-height:1.6
+}
+
+small{
+  color:#8f9ab7
+}
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
 <h1>⚽ Football Recap AI</h1>
-<p class="sub">ဗီဒီယိုထည့် → AI ကြည့် → မြန်မာ Recap ထုတ်</p>
+
+<p class="sub">
+ဗီဒီယိုထည့် → AI ကြည့် → မြန်မာ Recap ထုတ်
+</p>
 
 <div class="card">
+
 <label>🎬 Video Upload</label>
-<input id="videoFile" type="file" accept="video/*">
-<small>အများဆုံး 10 မိနစ်</small>
+
+<input
+  id="videoFile"
+  type="file"
+  accept="video/*"
+>
+
+<small>
+အများဆုံး 10 မိနစ်
+</small>
+
 </div>
 
-<div class="card">
-<label>📝 မြန်မာ Recap</label>
-<textarea id="recap" placeholder="ဗီဒီယိုထည့်ပြီး AI ခလုတ်နှိပ်ပါ..."></textarea>
 
-<button id="aiBtn">🤖 AI နဲ့ Video Recap ထုတ်မယ်</button>
-<button id="speakBtn" class="secondary">🔊 မြန်မာအသံနဲ့ ဖတ်မယ်</button>
+<div class="card">
+
+<label>📝 မြန်မာ Recap</label>
+
+<textarea
+  id="recap"
+  placeholder="ဗီဒီယိုထည့်ပြီး AI ခလုတ်နှိပ်ပါ..."
+></textarea>
+
+<button id="aiBtn">
+🤖 AI နဲ့ Video Recap ထုတ်မယ်
+</button>
+
+<button id="speakBtn" class="secondary">
+🔊 မြန်မာအသံနဲ့ ဖတ်မယ်
+</button>
 
 <div id="status" class="status"></div>
+
 </div>
+
 
 <div class="card">
+
 <label>🎙️ ကိုယ့်အသံနမူနာ</label>
-<input id="voiceFile" type="file" accept="audio/*">
-<small>Voice AI ချိတ်ပြီးနောက် ကိုယ့်အသံနဲ့ ဖတ်နိုင်အောင် ဆက်လုပ်မယ်။</small>
+
+<input
+  id="voiceFile"
+  type="file"
+  accept="audio/*"
+>
+
+<small>
+Voice AI ချိတ်ပြီးနောက် ကိုယ့်အသံနဲ့ ဖတ်နိုင်အောင် ဆက်လုပ်မယ်။
+</small>
+
 </div>
 
 </div>
+
 
 <script>
-const $=id=>document.getElementById(id);
 
-function status(msg){
-  $("status").style.display="block";
-  $("status").textContent=msg;
+const $ = id => document.getElementById(id);
+
+
+function status(message){
+
+  $("status").style.display = "block";
+
+  $("status").textContent = message;
+
 }
 
-$("videoFile").addEventListener("change",e=>{
-  const file=e.target.files[0];
-  if(!file)return;
 
-  if(file.size>30*1024*1024){
-    status("❌ အခုဗားရှင်းမှာ Video 30MB အောက်ပဲ ထည့်ပါ။");
-    e.target.value="";
-    return;
-  }
+/* VIDEO CHECK */
 
-  const video=document.createElement("video");
-  video.preload="metadata";
+$("videoFile").addEventListener("change", e => {
 
-  video.onloadedmetadata=()=>{
-    URL.revokeObjectURL(video.src);
-
-    if(video.duration>600){
-      status("❌ Video က 10 မိနစ်ထက် မကျော်ရပါ။");
-      e.target.value="";
-    }else{
-      status("✅ Video အဆင်ပြေပါတယ်။ AI Recap ထုတ်လို့ရပါပြီ။");
-    }
-  };
-
-  video.src=URL.createObjectURL(file);
-});
-
-$("aiBtn").addEventListener("click",async()=>{
-  const file=$("videoFile").files[0];
+  const file = e.target.files[0];
 
   if(!file){
-    status("❌ အရင်ဆုံး Video ထည့်ပါ။");
     return;
   }
 
-  $("aiBtn").disabled=true;
-  status("🤖 AI က Video ကိုကြည့်ပြီး Recap ရေးနေပါတယ်...");
 
-  try{
-    const base64=await new Promise((resolve,reject)=>{
-      const reader=new FileReader();
+  const video = document.createElement("video");
 
-      reader.onload=()=>{
-        const result=reader.result;
-        resolve(result.split(",")[1]);
-      };
+  video.preload = "metadata";
 
-      reader.onerror=()=>reject(new Error("Video ဖတ်မရပါ"));
-      reader.readAsDataURL(file);
-    });
 
-    const response=await fetch("/api/gemini",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        videoBase64:base64,
-        mimeType:file.type
-      })
-    });
+  video.onloadedmetadata = () => {
 
-    const data=await response.json();
+    URL.revokeObjectURL(video.src);
 
-    if(!response.ok){
-      throw new Error(data.error||"AI Error");
+
+    if(video.duration > 600){
+
+      status(
+        "❌ Video က 10 မိနစ်ထက် မကျော်ရပါ။"
+      );
+
+      $("videoFile").value = "";
+
+      return;
     }
 
-    $("recap").value=data.result;
-    status("✅ Video Recap ပြီးပါပြီ။");
+
+    status(
+      "✅ Video အဆင်ပြေပါတယ်။ AI Recap ထုတ်လို့ရပါပြီ။"
+    );
+
+  };
+
+
+  video.onerror = () => {
+
+    status(
+      "❌ ဒီ Video ဖိုင်ကို ဖတ်မရပါ။"
+    );
+
+  };
+
+
+  video.src = URL.createObjectURL(file);
+
+});
+
+
+/* AI VIDEO RECAP */
+
+$("aiBtn").addEventListener("click", async () => {
+
+  const file = $("videoFile").files[0];
+
+
+  if(!file){
+
+    status(
+      "❌ အရင်ဆုံး Video ထည့်ပါ။"
+    );
+
+    return;
+  }
+
+
+  $("aiBtn").disabled = true;
+
+
+  status(
+    "🤖 AI က Video ကိုဖတ်ပြီး Recap ရေးနေပါတယ်..."
+  );
+
+
+  try{
+
+
+    /* Convert video to Base64 */
+
+    const base64 = await new Promise(
+      (resolve, reject) => {
+
+        const reader = new FileReader();
+
+
+        reader.onload = () => {
+
+          const result = reader.result;
+
+          const comma = result.indexOf(",");
+
+
+          if(comma === -1){
+
+            reject(
+              new Error("Video ဖိုင်ဖတ်မရပါ")
+            );
+
+            return;
+          }
+
+
+          resolve(
+            result.substring(comma + 1)
+          );
+
+        };
+
+
+        reader.onerror = () => {
+
+          reject(
+            new Error("Video ဖိုင်ဖတ်မရပါ")
+          );
+
+        };
+
+
+        reader.readAsDataURL(file);
+
+      }
+    );
+
+
+    /* Send video to server */
+
+    const response = await fetch(
+      "/api/gemini",
+      {
+        method:"POST",
+
+        headers:{
+          "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+
+          videoBase64:base64,
+
+          mimeType:file.type
+
+        })
+
+      }
+    );
+
+
+    /* Read server response safely */
+
+    const responseText =
+      await response.text();
+
+
+    let data;
+
+
+    try{
+
+      data = JSON.parse(
+        responseText
+      );
+
+    }catch{
+
+      throw new Error(
+        "Video ဖိုင်ကြီးလွန်းလို့ Server က လက်မခံနိုင်ပါ။"
+      );
+
+    }
+
+
+    if(!response.ok){
+
+      throw new Error(
+        data.error || "AI Error"
+      );
+
+    }
+
+
+    if(!data.result){
+
+      throw new Error(
+        "AI က Recap စာသားမပြန်ပေးပါ။"
+      );
+
+    }
+
+
+    /* Show result */
+
+    $("recap").value =
+      data.result;
+
+
+    status(
+      "✅ Video Recap ပြီးပါပြီ။"
+    );
+
 
   }catch(error){
-    status("❌ "+error.message);
+
+    status(
+      "❌ " + error.message
+    );
+
   }finally{
-    $("aiBtn").disabled=false;
+
+    $("aiBtn").disabled = false;
+
   }
+
 });
 
-$("speakBtn").addEventListener("click",()=>{
-  const text=$("recap").value.trim();
 
-  if(!text){
-    status("❌ အရင်ဆုံး Recap ထုတ်ပါ။");
-    return;
+/* BURMESE SPEECH */
+
+$("speakBtn").addEventListener(
+  "click",
+  () => {
+
+    const text =
+      $("recap").value.trim();
+
+
+    if(!text){
+
+      status(
+        "❌ အရင်ဆုံး Recap ထုတ်ပါ။"
+      );
+
+      return;
+    }
+
+
+    if(!("speechSynthesis" in window)){
+
+      status(
+        "❌ ဒီ browser မှာ အသံဖတ်စနစ် မရပါ။"
+      );
+
+      return;
+    }
+
+
+    speechSynthesis.cancel();
+
+
+    const voice =
+      new SpeechSynthesisUtterance(text);
+
+
+    voice.lang = "my-MM";
+
+    voice.rate = 0.92;
+
+    voice.pitch = 1;
+
+
+    speechSynthesis.speak(voice);
+
+
+    status(
+      "🔊 အသံဖတ်နေပါတယ်..."
+    );
+
   }
+);
 
-  if(!("speechSynthesis" in window)){
-    status("❌ ဒီ browser မှာ အသံဖတ်စနစ် မရပါ။");
-    return;
-  }
-
-  speechSynthesis.cancel();
-
-  const voice=new SpeechSynthesisUtterance(text);
-  voice.lang="my-MM";
-  voice.rate=0.92;
-
-  speechSynthesis.speak(voice);
-  status("🔊 အသံဖတ်နေပါတယ်...");
-});
 </script>
 
 </body>
