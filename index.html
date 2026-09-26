@@ -4,205 +4,446 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Recap AI</title>
+
 <style>
-body{margin:0;background:#0b1020;color:white;font-family:Arial,sans-serif}
-.container{max-width:700px;margin:auto;padding:20px}
-.card{background:#151c31;padding:18px;border-radius:16px;margin-bottom:16px}
-input,select,textarea,button{width:100%;box-sizing:border-box;padding:13px;margin-top:10px;border-radius:10px;font-size:16px}
-input,select,textarea{background:#0d1426;color:white;border:1px solid #34415f}
-button{background:#2f7cff;color:white;border:0;font-weight:bold}
-button:disabled{opacity:.5}
-textarea{height:220px}
-#status{margin-top:12px;padding:10px;background:#0d1426;border-radius:10px}
+body{
+  margin:0;
+  background:#0b1020;
+  color:white;
+  font-family:Arial,sans-serif
+}
+
+.container{
+  max-width:700px;
+  margin:auto;
+  padding:20px
+}
+
+.card{
+  background:#151c31;
+  padding:18px;
+  border-radius:16px;
+  margin-bottom:16px
+}
+
+input,select,textarea,button{
+  width:100%;
+  box-sizing:border-box;
+  padding:13px;
+  margin-top:10px;
+  border-radius:10px;
+  font-size:16px
+}
+
+input,select,textarea{
+  background:#0d1426;
+  color:white;
+  border:1px solid #34415f
+}
+
+button{
+  background:#2f7cff;
+  color:white;
+  border:0;
+  font-weight:bold
+}
+
+button:disabled{
+  opacity:.5
+}
+
+textarea{
+  height:220px
+}
+
+#status{
+  margin-top:12px;
+  padding:10px;
+  background:#0d1426;
+  border-radius:10px
+}
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
 <h1>⚽🎬 Recap AI</h1>
+
 <p>Video ထည့် → AI ကြည့် → မြန်မာ Recap ထုတ်</p>
 
 <div class="card">
+
 <label>🎬 Video</label>
-<input id="video" type="file" accept="video/*">
+
+<input
+  id="video"
+  type="file"
+  accept="video/*"
+>
+
 <small>အများဆုံး 10 မိနစ်</small>
+
 </div>
 
+
 <div class="card">
+
 <label>📝 Recap Style</label>
+
 <select id="style">
-<option value="football">⚽ Football Recap</option>
-<option value="movie">🎬 Movie Recap</option>
-<option value="tiktok">📱 TikTok / Shorts Recap</option>
-<option value="natural">🗣️ သဘာဝ စကားပြောပုံစံ</option>
+
+<option value="football">
+⚽ Football Recap
+</option>
+
+<option value="movie">
+🎬 Movie Recap
+</option>
+
+<option value="tiktok">
+📱 TikTok / Shorts Recap
+</option>
+
+<option value="natural">
+🗣️ သဘာဝ စကားပြောပုံစံ
+</option>
+
 </select>
+
 </div>
+
 
 <div class="card">
-<textarea id="recap" placeholder="AI Recap ဒီမှာပေါ်ပါမယ်..."></textarea>
-<button id="btn">🤖 AI နဲ့ Recap ထုတ်မယ်</button>
+
+<textarea
+  id="recap"
+  placeholder="AI Recap ဒီမှာပေါ်ပါမယ်..."
+></textarea>
+
+<button id="btn">
+🤖 AI နဲ့ Recap ထုတ်မယ်
+</button>
+
 <div id="status"></div>
+
 </div>
 
 </div>
+
 
 <script>
+
 const video = document.getElementById("video");
+
 const btn = document.getElementById("btn");
+
 const recap = document.getElementById("recap");
+
 const status = document.getElementById("status");
 
+
 function show(text){
+
   status.textContent = text;
+
 }
 
+
 video.onchange = () => {
+
   const file = video.files[0];
+
   if(!file) return;
 
   const v = document.createElement("video");
+
   v.preload = "metadata";
 
   v.onloadedmetadata = () => {
+
     URL.revokeObjectURL(v.src);
 
     if(v.duration > 600){
+
       video.value = "";
+
       show("❌ Video 10 မိနစ်ထက် မကျော်ရပါ");
+
     }else{
+
       show("✅ Video အဆင်ပြေပါတယ်");
+
     }
+
   };
 
   v.src = URL.createObjectURL(file);
+
 };
+
 
 btn.onclick = async () => {
 
   const file = video.files[0];
 
   if(!file){
+
     show("❌ Video အရင်ထည့်ပါ");
+
     return;
+
   }
 
+
   btn.disabled = true;
+
   recap.value = "";
+
 
   try {
 
+
+    // 1. Gemini Upload Session
+
     show("📤 Upload ပြင်ဆင်နေပါတယ်...");
 
-    // 1. Gemini upload session ရယူ
-    const sessionRes = await fetch("/api/upload-session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        size: file.size,
-        mimeType: file.type
-      })
-    });
 
-    const sessionText = await sessionRes.text();
+    const sessionRes = await fetch(
+      "/api/upload-session",
+      {
+        method:"POST",
+
+        headers:{
+          "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+          size:file.size,
+          mimeType:file.type
+        })
+      }
+    );
+
+
+    const sessionText =
+      await sessionRes.text();
+
 
     let sessionData;
-    try {
-      sessionData = JSON.parse(sessionText);
-    } catch {
-      throw new Error(sessionText || "Upload session error");
+
+
+    try{
+
+      sessionData =
+        JSON.parse(sessionText);
+
+    }catch{
+
+      throw new Error(
+        sessionText ||
+        "Upload session error"
+      );
+
     }
+
 
     if(!sessionRes.ok){
-      throw new Error(sessionData.error || "Upload session မရပါ");
+
+      throw new Error(
+        sessionData.error ||
+        "Upload session မရပါ"
+      );
+
     }
 
-    const uploadUrl = sessionData.uploadUrl;
+
+    const uploadUrl =
+      sessionData.uploadUrl;
+
 
     if(!uploadUrl){
-      throw new Error("Gemini upload URL မရပါ");
+
+      throw new Error(
+        "Gemini upload URL မရပါ"
+      );
+
     }
 
-    // 2. Video ကို Gemini ဆီ တိုက်ရိုက် upload
+
+    // 2. Upload Video Directly to Gemini
+
     show("📤 Video တင်နေပါတယ်...");
 
-    const uploadRes = await fetch(uploadUrl, {
-      method: "POST",
-      headers: {
-        "Content-Length": file.size,
-        "X-Goog-Upload-Offset": "0",
-        "X-Goog-Upload-Command": "upload, finalize",
-        "Content-Type": file.type
-      },
-      body: file
-    });
 
-    const uploadText = await uploadRes.text();
+    const uploadRes = await fetch(
+      uploadUrl,
+      {
+        method:"POST",
+
+        headers:{
+          "X-Goog-Upload-Offset":"0",
+
+          "X-Goog-Upload-Command":
+            "upload, finalize",
+
+          "Content-Type":
+            file.type
+        },
+
+        body:file
+      }
+    );
+
+
+    const uploadText =
+      await uploadRes.text();
+
 
     let uploadData;
-    try {
-      uploadData = JSON.parse(uploadText);
-    } catch {
-      throw new Error(uploadText || "Video upload မအောင်မြင်ပါ");
+
+
+    try{
+
+      uploadData =
+        JSON.parse(uploadText);
+
+    }catch{
+
+      throw new Error(
+        uploadText ||
+        "Video upload မအောင်မြင်ပါ"
+      );
+
     }
+
 
     if(!uploadRes.ok){
+
       throw new Error(
-        uploadData.error?.message || "Video upload မအောင်မြင်ပါ"
+        uploadData.error?.message ||
+        "Video upload မအောင်မြင်ပါ"
       );
+
     }
 
-    const fileInfo = uploadData.file || uploadData;
 
-    const fileUri = fileInfo.uri;
-    const mimeType = fileInfo.mimeType || file.type;
+    const fileInfo =
+      uploadData.file ||
+      uploadData;
+
+
+    const fileUri =
+      fileInfo.uri;
+
+
+    const mimeType =
+      fileInfo.mimeType ||
+      file.type;
+
 
     if(!fileUri){
-      throw new Error("Gemini File URI မရပါ");
+
+      throw new Error(
+        "Gemini File URI မရပါ"
+      );
+
     }
 
-    // 3. Gemini ကို recap တောင်း
-    show("🤖 AI က Video ကို ကြည့်ပြီး Recap ရေးနေပါတယ်...");
 
-    const aiRes = await fetch("/api/gemini", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        fileUri,
-        mimeType,
-        style: document.getElementById("style").value
-      })
-    });
+    // 3. Ask Gemini for Recap
 
-    const aiText = await aiRes.text();
+    show(
+      "🤖 AI က Video ကို ကြည့်ပြီး Recap ရေးနေပါတယ်..."
+    );
+
+
+    const aiRes = await fetch(
+      "/api/gemini",
+      {
+        method:"POST",
+
+        headers:{
+          "Content-Type":
+            "application/json"
+        },
+
+        body:JSON.stringify({
+
+          fileUri:fileUri,
+
+          mimeType:mimeType,
+
+          style:
+            document.getElementById(
+              "style"
+            ).value
+
+        })
+      }
+    );
+
+
+    const aiText =
+      await aiRes.text();
+
 
     let aiData;
-    try {
-      aiData = JSON.parse(aiText);
-    } catch {
-      throw new Error(aiText || "AI response error");
+
+
+    try{
+
+      aiData =
+        JSON.parse(aiText);
+
+    }catch{
+
+      throw new Error(
+        aiText ||
+        "AI response error"
+      );
+
     }
+
 
     if(!aiRes.ok){
-      throw new Error(aiData.error || "Gemini Error");
+
+      throw new Error(
+        aiData.error ||
+        "Gemini Error"
+      );
+
     }
 
-    recap.value = aiData.result || "";
-    show("✅ Recap ပြီးပါပြီ");
 
-  } catch(error) {
+    recap.value =
+      aiData.result || "";
+
+
+    show(
+      "✅ Recap ပြီးပါပြီ"
+    );
+
+
+  }catch(error){
 
     console.error(error);
-    show("❌ " + error.message);
 
-  } finally {
+    show(
+      "❌ " +
+      error.message
+    );
+
+
+  }finally{
+
     btn.disabled = false;
+
   }
+
 };
+
 </script>
 
 </body>
