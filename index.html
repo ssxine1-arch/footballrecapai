@@ -151,7 +151,7 @@ function show(text){
 
 
 /* =========================
-   VIDEO DURATION CHECK
+   VIDEO CHECK
 ========================= */
 
 video.onchange = () => {
@@ -173,14 +173,12 @@ video.onchange = () => {
 
       video.value = "";
 
-      show(
-        "❌ Video 10 မိနစ်ထက် မကျော်ရပါ"
-      );
+      show("❌ Video 10 မိနစ်ထက် မကျော်ရပါ");
 
     }else{
 
       show(
-        "✅ Video အဆင်ပြေပါတယ် — AI Recap ထုတ်နိုင်ပါပြီ"
+        "✅ Video အဆင်ပြေပါတယ်"
       );
 
     }
@@ -191,9 +189,7 @@ video.onchange = () => {
 
     URL.revokeObjectURL(v.src);
 
-    show(
-      "❌ Video ကိုဖတ်မရပါ"
-    );
+    show("❌ Video ကိုဖတ်မရပါ");
 
   };
 
@@ -214,30 +210,24 @@ btn.onclick = async () => {
 
   if(!file){
 
-    show(
-      "❌ Video အရင်ထည့်ပါ"
-    );
+    show("❌ Video အရင်ထည့်ပါ");
 
     return;
 
   }
 
-
   btn.disabled = true;
-
   recap.value = "";
-
 
   try{
 
     /* =========================
-       1. UPLOAD SESSION
+       1. CREATE GEMINI SESSION
     ========================= */
 
     show(
       "📤 Upload ပြင်ဆင်နေပါတယ်..."
     );
-
 
     const sessionRes =
       await fetch(
@@ -251,15 +241,10 @@ btn.onclick = async () => {
           },
 
           body:JSON.stringify({
-
             size:file.size,
-
             mimeType:
-              file.type ||
-              "video/mp4"
-
+              file.type || "video/mp4"
           })
-
         }
       );
 
@@ -267,9 +252,7 @@ btn.onclick = async () => {
     const sessionText =
       await sessionRes.text();
 
-
     let sessionData;
-
 
     try{
 
@@ -310,21 +293,13 @@ btn.onclick = async () => {
 
 
     /* =========================
-       2. DIRECT GEMINI UPLOAD
+       2. UPLOAD VIDEO
     ========================= */
-
-    /*
-      Gemini resumable upload
-      requires non-final chunks
-      to be multiples of 8 MiB.
-    */
 
     const CHUNK_SIZE =
       8 * 1024 * 1024;
 
-
     let offset = 0;
-
     let fileInfo = null;
 
 
@@ -336,13 +311,11 @@ btn.onclick = async () => {
           file.size
         );
 
-
       const chunk =
         file.slice(
           offset,
           end
         );
-
 
       const isLast =
         end >= file.size;
@@ -361,38 +334,26 @@ btn.onclick = async () => {
       );
 
 
-      const chunkRes =
-        await fetch(
+      /*
+        IMPORTANT:
+        Gemini upload URL ကို
+        browser က တိုက်ရိုက် fetch မလုပ်နိုင်
+        ဖြစ်နိုင်တာကြောင့် XMLHttpRequest သုံးထားပါတယ်။
+      */
+
+      const result =
+        await uploadChunk(
           uploadUrl,
-          {
-            method:"POST",
-
-            headers:{
-
-              "X-Goog-Upload-Offset":
-                String(offset),
-
-              "X-Goog-Upload-Command":
-                isLast
-                  ? "upload, finalize"
-                  : "upload"
-
-            },
-
-            body:chunk
-
-          }
+          chunk,
+          offset,
+          isLast
         );
 
 
-      const chunkText =
-        await chunkRes.text();
-
-
-      if(!chunkRes.ok){
+      if(!result.ok){
 
         throw new Error(
-          chunkText ||
+          result.error ||
           "Gemini Video Upload မအောင်မြင်ပါ"
         );
 
@@ -401,20 +362,8 @@ btn.onclick = async () => {
 
       if(isLast){
 
-        try{
-
-          fileInfo =
-            JSON.parse(
-              chunkText
-            );
-
-        }catch{
-
-          throw new Error(
-            "Gemini File information မရပါ"
-          );
-
-        }
+        fileInfo =
+          result.data;
 
       }
 
@@ -425,7 +374,7 @@ btn.onclick = async () => {
 
 
     /* =========================
-       3. GET GEMINI FILE URI
+       3. FILE URI
     ========================= */
 
     const fileUri =
@@ -450,11 +399,11 @@ btn.onclick = async () => {
 
 
     /* =========================
-       4. GEMINI RECAP
+       4. AI RECAP
     ========================= */
 
     show(
-      "🤖 AI က Video ကို ကြည့်ပြီး Recap ရေးနေပါတယ်..."
+      "🤖 AI က Video ကို ကြည့်နေပါတယ်..."
     );
 
 
@@ -471,11 +420,9 @@ btn.onclick = async () => {
 
           body:JSON.stringify({
 
-            fileUri:
-              fileUri,
+            fileUri:fileUri,
 
-            mimeType:
-              mimeType,
+            mimeType:mimeType,
 
             style:
               document.getElementById(
@@ -494,13 +441,10 @@ btn.onclick = async () => {
 
     let aiData;
 
-
     try{
 
       aiData =
-        JSON.parse(
-          aiText
-        );
+        JSON.parse(aiText);
 
     }catch{
 
@@ -544,7 +488,6 @@ btn.onclick = async () => {
 
     console.error(error);
 
-
     show(
       "❌ " +
       (
@@ -561,6 +504,119 @@ btn.onclick = async () => {
   }
 
 };
+
+
+/* =========================
+   GEMINI CHUNK UPLOAD
+========================= */
+
+function uploadChunk(
+  uploadUrl,
+  chunk,
+  offset,
+  isLast
+){
+
+  return new Promise((resolve) => {
+
+    const xhr =
+      new XMLHttpRequest();
+
+    xhr.open(
+      "POST",
+      uploadUrl,
+      true
+    );
+
+
+    xhr.setRequestHeader(
+      "X-Goog-Upload-Offset",
+      String(offset)
+    );
+
+
+    xhr.setRequestHeader(
+      "X-Goog-Upload-Command",
+      isLast
+        ? "upload, finalize"
+        : "upload"
+    );
+
+
+    xhr.onload = () => {
+
+      let data = null;
+
+      try{
+
+        data =
+          JSON.parse(
+            xhr.responseText
+          );
+
+      }catch{
+
+        data = null;
+
+      }
+
+
+      if(
+        xhr.status >= 200 &&
+        xhr.status < 300
+      ){
+
+        resolve({
+          ok:true,
+          data:data
+        });
+
+      }else{
+
+        resolve({
+          ok:false,
+          error:
+            data?.error ||
+            xhr.responseText ||
+            "Upload failed"
+        });
+
+      }
+
+    };
+
+
+    xhr.onerror = () => {
+
+      resolve({
+        ok:false,
+        error:
+          "Browser က Gemini upload server ကို ချိတ်မရပါ"
+      });
+
+    };
+
+
+    xhr.ontimeout = () => {
+
+      resolve({
+        ok:false,
+        error:
+          "Upload timeout ဖြစ်သွားပါတယ်"
+      });
+
+    };
+
+
+    xhr.timeout =
+      120000;
+
+
+    xhr.send(chunk);
+
+  });
+
+}
 
 </script>
 
